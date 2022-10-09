@@ -18,15 +18,16 @@ class ViewController: UIViewController {
     @IBOutlet weak var someTableView: UITableView!
     var arrayOfSomeData = [SomeData]()
     var tableViewDataSource: UITableViewDiffableDataSource<SomeSection, SomeData>!
+    var snapShot = NSDiffableDataSourceSnapshot<SomeSection,SomeData>()
     override func viewDidLoad() {
         super.viewDidLoad()
         someTableView.delegate = self
         configureDataSource()
-        someTableView.showAnimatedGradientSkeleton()
+        setupUIRefreshControl(with: someTableView)
+        showTableViewSkeleton()
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
             self.createSnapShot()
-
         }
     }
 
@@ -38,24 +39,54 @@ class ViewController: UIViewController {
         })
     }
 
-    private func getData() ->  [SomeData] {
-        return [
-            SomeData(name: "HeadPhone"),
-            SomeData(name: "Mic?"),
-            SomeData(name: "Headphone B?"),
-            SomeData(name: "Wireless?"),
-            SomeData(name: "HeadPhone A+"),
-            SomeData(name: "Mic +")
-        ]
+    private func getData(isNewFetched: Bool = true) ->  [SomeData] {
+        var array: [SomeData]  = []
+        array.append(SomeData(name: "HeadPhone"))
+        array.append(SomeData(name: "Mic"))
+        array.append(SomeData(name: "Headphone B?"))
+        array.append(SomeData(name: "Wireless?"))
+        array.append(SomeData(name: "HeadPhone A+"))
+        array.append(SomeData(name: "Mic +"))
+
+        if isNewFetched {
+            array.append(SomeData(name: "HABIBI Headset"))
+            array.append(SomeData(name: "Memorial Headset"))
+        }
+
+        return array
     }
 
-    private func createSnapShot() {
-        var snapShot = NSDiffableDataSourceSnapshot<SomeSection,SomeData>()
+    private func createSnapShot(isNewFetched: Bool = false) {
+        snapShot = NSDiffableDataSourceSnapshot<SomeSection,SomeData>()
         snapShot.appendSections([.top])
-        snapShot.appendItems(getData())
+        snapShot.appendItems(getData(isNewFetched: isNewFetched))
         someTableView.hideSkeleton()
         tableViewDataSource.apply(snapShot, animatingDifferences: true)
     }
+
+    fileprivate func showTableViewSkeleton() {
+        someTableView.showAnimatedGradientSkeleton()
+    }
+
+    func setupUIRefreshControl(with tableView: UITableView) {
+        let refreshControl = UIRefreshControl()
+        refreshControl.addTarget(self, action: #selector(handleRefresh), for: .valueChanged)
+        refreshControl.tintColor = .gray
+        someTableView.refreshControl = refreshControl
+    }
+
+    @objc func handleRefresh() {
+        showTableViewSkeleton()
+        self.arrayOfSomeData = []
+        self.snapShot.deleteAllItems()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+
+            self.createSnapShot(isNewFetched: true)
+            self.someTableView.refreshControl?.endRefreshing()
+
+        }
+    }
+
 }
 
 
